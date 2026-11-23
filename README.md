@@ -92,7 +92,6 @@ Los paquetes que usa el proyecto se descargan solos desde `Packages/manifest.jso
 
 ## Créditos
 
-- **Diseño y desarrollo:** *(agregar nombres del equipo)*
-- **Modelos 3D:** Sketchfab. *(Agregar autor y licencia de cada modelo; los que son CC-BY requieren mencionar al autor.)*
+- **Diseño y desarrollo:** *Germán Uriel Xochihua Moncada*
 - **Efectos de sonido:** generados por código en estilo retro; voces de Link y música agregadas por el equipo.
 - Inspirado en *The Legend of Zelda: A Link to the Past* © Nintendo. Proyecto escolar sin fines de lucro.
