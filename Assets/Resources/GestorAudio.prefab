@@ -1,0 +1,79 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &8214111640982354433
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 5224129204922866820}
+  - component: {fileID: 5967115325587193068}
+  m_Layer: 0
+  m_Name: GestorAudio
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &5224129204922866820
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8214111640982354433}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &5967115325587193068
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8214111640982354433}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: baa82cd38663df407a381aecfe5fd30c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::GestorAudio
+  musicaMenu: {fileID: 8300000, guid: 7263c8221d14dd5c3949f10b8c914f1b, type: 3}
+  musicaRonda: {fileID: 8300000, guid: 8cb53632ab56dbf4082d402e5dfa1550, type: 3}
+  musicaJefe: {fileID: 8300000, guid: 361b82f4265dd19038265ae59e935282, type: 3}
+  musicaPerder: {fileID: 8300000, guid: fdc3a82f698367dd7a2978196c3eca08, type: 3}
+  musicaGanar: {fileID: 8300000, guid: 80b4a886afec4006b9185eb78d660c57, type: 3}
+  volumenMusica: 0.5
+  tiempoCambio: 1
+  boton: {fileID: 8300000, guid: 472be104da1e731debf56a628114b306, type: 3}
+  espadazo: {fileID: 8300000, guid: 732fbf2811f5ec968a856e37209dc214, type: 3}
+  espadazoCircular: {fileID: 8300000, guid: a51fb1c1f131637098e2256488b01916, type: 3}
+  disparoArco: {fileID: 8300000, guid: 972d305ddfb775bb68c9c1fac7b35951, type: 3}
+  disparoDragona: {fileID: 8300000, guid: da3beceda13b64ed8b8f1f5916f73092, type: 3}
+  goblinDisparo: {fileID: 8300000, guid: 1c7b3c2ad66ead519b4ab22cfba3f0b2, type: 3}
+  golpeRecibido: {fileID: 8300000, guid: 22b202064afd2e20792f5e45eaec2701, type: 3}
+  golpeEscudo: {fileID: 8300000, guid: 0adfdc49ad886e65394e379c005ebfb9, type: 3}
+  rugidoGoblin: {fileID: 8300000, guid: 9be8a617fc061656eb5596e132fe8e89, type: 3}
+  vozDanio: {fileID: 8300000, guid: b36505cac23107d97a3e399e70a7def0, type: 3}
+  vozMorir: {fileID: 8300000, guid: f441221243a86dc3298de2a42dea77e2, type: 3}
+  vozSaltar: {fileID: 8300000, guid: f3746cf19d9e9c79abb5d1ba5317f883, type: 3}
+  vozGiro: {fileID: 8300000, guid: 28999657fa97015c8a42d7415801cc22, type: 3}
+  vozAtaque:
+  - {fileID: 8300000, guid: 85fa767fa3081d33eadfb4ea3a67b8c0, type: 3}
+  - {fileID: 8300000, guid: 5050c56c4ad933971abb668802aff0fd, type: 3}
+  - {fileID: 8300000, guid: 9e8bd59fbd4c66c158dc261a3fdfc110, type: 3}
+  - {fileID: 8300000, guid: 9c792951cb9c8ff33a125488d36a05e6, type: 3}
+  - {fileID: 8300000, guid: 1e85dffeb89d1b6178aa857bf5392dc5, type: 3}
+  - {fileID: 8300000, guid: 472fde953450801c7b18473bd64b4fb7, type: 3}
+  - {fileID: 8300000, guid: 5379cbd4cd1af1cc19cf57bde8c6cf50, type: 3}
+  volumenVoz: 1
+  volumenEfectos: 0.8
+  variacionTono: 0.08
+  escenaMenu: MainMenu
+  escenaJuego: Game

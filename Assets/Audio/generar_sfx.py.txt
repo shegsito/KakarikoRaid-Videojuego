@@ -1,0 +1,223 @@
+"""Genera efectos de sonido retro (estilo Zelda 16 bits) para Kakariko Raid.
+Uso: python3 generar_sfx.py <carpeta_salida>
+"""
+import sys, os, wave, math
+import numpy as np
+
+SR = 44100
+rng = np.random.default_rng(42)
+
+
+def t_(dur):
+    return np.arange(int(SR * dur)) / SR
+
+
+def env(n, ataque=0.005, caida=None, curva=3.0):
+    """Envolvente: subida lineal y caída exponencial."""
+    e = np.ones(n)
+    a = max(1, int(SR * ataque))
+    e[:a] = np.linspace(0, 1, a)
+    if caida is None:
+        x = np.linspace(0, 1, n - a)
+        e[a:] = (1 - x) ** curva
+    return e
+
+
+def ruido(n):
+    return rng.uniform(-1, 1, n)
+
+
+def biquad(x, tipo, f, q=0.707):
+    """Filtro biquad (RBJ). f puede ser escalar o arreglo (barrido)."""
+    f = np.broadcast_to(np.asarray(f, dtype=float), x.shape)
+    y = np.zeros_like(x)
+    x1 = x2 = y1 = y2 = 0.0
+    for i in range(len(x)):
+        w0 = 2 * math.pi * min(f[i], SR * 0.45) / SR
+        cs, sn = math.cos(w0), math.sin(w0)
+        al = sn / (2 * q)
+        if tipo == 'lp':
+            b0, b1, b2 = (1 - cs) / 2, 1 - cs, (1 - cs) / 2
+        elif tipo == 'hp':
+            b0, b1, b2 = (1 + cs) / 2, -(1 + cs), (1 + cs) / 2
+        else:  # band-pass
+            b0, b1, b2 = al, 0.0, -al
+        a0, a1, a2 = 1 + al, -2 * cs, 1 - al
+        yi = (b0 * x[i] + b1 * x1 + b2 * x2 - a1 * y1 - a2 * y2) / a0
+        x2, x1, y2, y1 = x1, x[i], y1, yi
+        y[i] = yi
+    return y
+
+
+def tono(frec, dur, forma='sin'):
+    """Tono con frecuencia variable (frec escalar o arreglo)."""
+    n = int(SR * dur)
+    f = np.broadcast_to(np.asarray(frec, dtype=float), (n,))
+    fase = 2 * np.pi * np.cumsum(f) / SR
+    if forma == 'sin':
+        return np.sin(fase)
+    if forma == 'square':
+        return np.sign(np.sin(fase))
+    if forma == 'saw':
+        return 2 * ((fase / (2 * np.pi)) % 1) - 1
+    raise ValueError(forma)
+
+
+def mezclar(*partes):
+    n = max(len(p) for p in partes)
+    out = np.zeros(n)
+    for p in partes:
+        out[:len(p)] += p
+    return out
+
+
+def guardar(nombre, x, carpeta, pico=0.89):
+    x = np.asarray(x, dtype=float)
+    # pequeños fundidos para evitar clics
+    f = min(len(x) // 4, int(SR * 0.004))
+    x[:f] *= np.linspace(0, 1, f)
+    x[-f:] *= np.linspace(1, 0, f)
+    m = np.max(np.abs(x))
+    if m > 0:
+        x = x / m * pico
+    datos = (x * 32767).astype(np.int16)
+    ruta = os.path.join(carpeta, nombre + '.wav')
+    with wave.open(ruta, 'wb') as w:
+        w.setnchannels(1)
+        w.setsampwidth(2)
+        w.setframerate(SR)
+        w.writeframes(datos.tobytes())
+    print(f'{ruta}  {len(x) / SR:.2f} s')
+
+
+# ---------------------------------------------------------------- sonidos
+
+def boton():
+    a = tono(988, 0.05, 'square') * env(int(SR * 0.05), 0.002, curva=1.5)
+    b = tono(1480, 0.08, 'square') * env(int(SR * 0.08), 0.002, curva=2.5)
+    x = np.concatenate([a, b]) * 0.35
+    return biquad(x, 'lp', 5000)
+
+
+def espadazo():
+    dur = 0.24
+    n = int(SR * dur)
+    barrido = np.geomspace(700, 4200, n)
+    whoosh = biquad(ruido(n), 'bp', barrido, q=1.6) * env(n, 0.03, curva=2.2)
+    shing = tono(np.linspace(2900, 3300, n), dur) * env(n, 0.002, curva=6) * 0.12
+    return mezclar(whoosh * 1.4, shing)
+
+
+def espadazo_circular():
+    dur = 0.6
+    n = int(SR * dur)
+    # dos pasadas de aire (sube y baja) + tono que sube como en el giro de Zelda
+    sube = np.geomspace(500, 3800, n // 2)
+    baja = np.geomspace(3800, 900, n - n // 2)
+    whoosh = biquad(ruido(n), 'bp', np.concatenate([sube, baja]), q=1.4)
+    whoosh *= np.sin(np.linspace(0, np.pi, n)) ** 0.8
+    zumbido = tono(np.geomspace(260, 1040, n), dur, 'saw')
+    zumbido = biquad(zumbido, 'lp', 2500) * np.sin(np.linspace(0, np.pi, n)) * 0.18
+    brillo = tono(np.geomspace(1500, 3000, n), dur) * env(n, 0.25, curva=2) * 0.08
+    return mezclar(whoosh * 1.3, zumbido, brillo)
+
+
+def karplus(frec, dur, brillo=0.5):
+    n = int(SR * dur)
+    p = int(SR / frec)
+    buf = list(rng.uniform(-1, 1, p))
+    out = np.zeros(n)
+    for i in range(n):
+        out[i] = buf[i % p]
+        buf[i % p] = 0.996 * (brillo * buf[i % p] + (1 - brillo) * buf[(i + 1) % p])
+    return out
+
+
+def disparo_arco():
+    cuerda = karplus(196, 0.35, 0.45) * env(int(SR * 0.35), 0.001, curva=2.5)
+    n = int(SR * 0.18)
+    aire = biquad(ruido(n), 'bp', np.geomspace(3000, 1200, n), q=2.0) * env(n, 0.01, curva=2) * 0.5
+    golpe = tono(np.geomspace(300, 90, int(SR * 0.05)), 0.05) * env(int(SR * 0.05), 0.001, curva=3) * 0.5
+    return mezclar(cuerda, aire, golpe)
+
+
+def disparo_dragona():
+    dur = 0.55
+    n = int(SR * dur)
+    fuego = biquad(ruido(n), 'lp', np.geomspace(3500, 500, n), q=0.9) * env(n, 0.01, curva=1.6)
+    crujido = np.zeros(n)
+    for i in rng.choice(n, 90, replace=False):            # chispas
+        largo = int(SR * 0.003)
+        crujido[i:i + largo] += rng.uniform(-1, 1, len(crujido[i:i + largo]))
+    crujido = biquad(crujido, 'hp', 2000) * env(n, 0.01, curva=1.2) * 0.5
+    rugido = tono(np.geomspace(420, 140, n), dur, 'saw')
+    rugido = biquad(rugido, 'lp', 900) * env(n, 0.02, curva=2) * 0.35
+    return mezclar(fuego * 1.2, crujido, rugido)
+
+
+def goblin_disparo():
+    dur = 0.45
+    n = int(SR * dur)
+    aire = biquad(ruido(n), 'bp', np.geomspace(180, 900, n), q=1.2) * np.sin(np.linspace(0, np.pi, n)) * 1.4
+    m = int(SR * 0.22)
+    gru = tono(110 + 15 * np.sin(np.linspace(0, 20, m)), 0.22, 'saw')
+    gru = biquad(biquad(gru, 'bp', 500, 2.0) + 0.5 * biquad(gru, 'bp', 1100, 3.0), 'lp', 2000)
+    gru *= env(m, 0.02, curva=1.5) * 0.9
+    return mezclar(gru, aire)
+
+
+def golpe_recibido():
+    m = int(SR * 0.16)
+    golpe = tono(np.geomspace(150, 45, m), 0.16) * env(m, 0.001, curva=2.5)
+    click = biquad(ruido(int(SR * 0.02)), 'lp', 3000) * env(int(SR * 0.02), 0.0005, curva=4) * 0.6
+    k = int(SR * 0.16)
+    retro = tono(np.repeat([660, 520, 400, 300], k // 4 + 1)[:k], 0.16, 'square')
+    retro = biquad(retro, 'lp', 3500) * env(k, 0.002, curva=1.2) * 0.28
+    return mezclar(golpe, click, np.concatenate([np.zeros(int(SR * 0.02)), retro]))
+
+
+def golpe_escudo():
+    dur = 0.7
+    n = int(SR * dur)
+    t = t_(dur)
+    base = 520
+    clang = np.zeros(n)
+    for razon, amp, decae in [(1.0, 1.0, 5), (2.76, 0.6, 7), (5.40, 0.4, 10), (8.93, 0.25, 14), (13.3, 0.15, 18)]:
+        clang += amp * np.sin(2 * np.pi * base * razon * t + rng.uniform(0, 6)) * np.exp(-decae * t)
+    transitorio = biquad(ruido(int(SR * 0.03)), 'hp', 1500) * env(int(SR * 0.03), 0.0005, curva=3)
+    golpe = tono(np.geomspace(200, 70, int(SR * 0.08)), 0.08) * env(int(SR * 0.08), 0.001, curva=3) * 0.6
+    return mezclar(clang * 0.6, transitorio * 0.8, golpe)
+
+
+def rugido_goblin():
+    dur = 1.7
+    n = int(SR * dur)
+    t = t_(dur)
+    f0 = 78 + 18 * np.sin(2 * np.pi * 0.7 * t) + 6 * np.sin(2 * np.pi * 7.5 * t)   # vibrato
+    voz = tono(f0, dur, 'saw') + 0.5 * tono(f0 * 1.01, dur, 'saw')
+    voz = np.tanh(voz * 2.5)                                                       # distorsión (garganta)
+    formantes = biquad(voz, 'bp', np.linspace(380, 520, n), 3.0) + 0.7 * biquad(voz, 'bp', np.linspace(850, 1100, n), 4.0)
+    aliento = biquad(ruido(n), 'bp', 700, 0.8) * 0.35
+    temblor = 1 + 0.25 * np.sin(2 * np.pi * 11 * t)
+    forma = np.minimum(1, t / 0.25) * np.clip((dur - t) / 0.9, 0, 1) ** 1.3          # crece y se apaga
+    x = (formantes + aliento) * temblor * forma
+    return biquad(x, 'lp', 3000)
+
+
+SONIDOS = {
+    'boton': boton,
+    'espadazo': espadazo,
+    'espadazo_circular': espadazo_circular,
+    'disparo_arco': disparo_arco,
+    'disparo_dragona': disparo_dragona,
+    'goblin_disparo': goblin_disparo,
+    'golpe_recibido': golpe_recibido,
+    'golpe_escudo': golpe_escudo,
+    'rugido_goblin': rugido_goblin,
+}
+
+if __name__ == '__main__':
+    carpeta = sys.argv[1]
+    os.makedirs(carpeta, exist_ok=True)
+    for nombre, f in SONIDOS.items():
+        guardar(nombre, f(), carpeta)
